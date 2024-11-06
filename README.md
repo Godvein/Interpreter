@@ -8,7 +8,7 @@ The aim of this project is to build a basic interpreter that can tokenize user i
 
 ## Acknowledgments
 
-Special thanks to the tutorial by [CodePulse](https://youtu.be/Eythq9848Fg?si=Ty6T7Bo4h5eMDKuS) for guiding the initial steps of this project. The tutorial has been invaluable in helping me understand key concepts and structure for language creation in Python.
+Special thanks to the tutorial by [CodePulse](https://youtu.be/Eythq9848Fg?si=Ty6T7Bo4h5eMDKuS) for guiding this project. The tutorial has been invaluable in helping me understand key concepts and structure for language creation in Python.
 
 ---
 
