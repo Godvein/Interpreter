@@ -102,28 +102,27 @@ class Token():
 
 #lexer class lexes through each character and add it to the tokens by calling the token class which returns its type and text value
 class Lexer():
-    def __init__(self,text,fn):
+    def __init__(self, text, fn):
         self.fn = fn
         self.text = text
         self.pos = Position(-1, 0, -1, fn, text)
         self.curr_char = None
         self.advance()
 
-    def advance(self): # advance function advances one character at a time
+    def advance(self): 
         self.pos.advance(self.curr_char)
         self.curr_char = self.text[self.pos.idx] if self.pos.idx < len(self.text) else None
-        
+
     def tokenize(self):
         tokens = []
 
         while self.curr_char is not None:
-            if self.curr_char in ' \t': #check if current character is space or tab and ignore it to advance to next
+            if self.curr_char in ' \t':  # Skip whitespace
                 self.advance()
-            #setting numbers in the token it can be either fload or integer
+            # If it's a number (integer or float), process it
             elif self.curr_char in DIGITS:
                 tokens.append(self.make_numbers())
-                self.advance()
-            #setting the operators in the token
+            # If it's an operator, add it as a token
             elif self.curr_char == "+":
                 tokens.append(Token(PLUS))
                 self.advance()
@@ -131,7 +130,7 @@ class Lexer():
                 tokens.append(Token(MINUS))
                 self.advance()
             elif self.curr_char == "*":
-                tokens.append(Token( MULTIPLY))
+                tokens.append(Token(MULTIPLY))
                 self.advance()
             elif self.curr_char == "/":
                 tokens.append(Token(DIVIDE))
@@ -142,8 +141,7 @@ class Lexer():
             elif self.curr_char == "^":
                 tokens.append(Token(POWER))
                 self.advance()
-            
-            #setting the parentheses in the token
+            # Handle parentheses as tokens
             elif self.curr_char == "(":
                 tokens.append(Token(LEFT_PAR))
                 self.advance()
@@ -151,31 +149,33 @@ class Lexer():
                 tokens.append(Token(RIGHT_PAR))
                 self.advance()
             else:
-                #return error
+                # If an invalid character is found, raise an error
                 pos_start = self.pos.copy()
                 char = self.curr_char
                 self.advance()
-                return [], IllegalCharacterError(pos_start, self.pos,char)
-            
+                return [], IllegalCharacterError(pos_start, self.pos, char)
+
         return tokens, None
 
-#check if number is float or integer
+    # Method to handle numbers, including floating-point numbers
     def make_numbers(self):
         dot_count = 0
         num = ''
 
         while self.curr_char is not None and self.curr_char in DIGITS + '.':
             if self.curr_char == '.':
-                if dot_count == 1: break
+                if dot_count == 1: break  # Ensure there's only one dot for decimal
                 dot_count += 1
                 num += '.'
             else:
-                num+= self.curr_char
+                num += self.curr_char
             self.advance()
+
         if dot_count == 0:
             return Token(INTEGER, int(num))
         else:
-            return Token(FLOAT, float(num))   
+            return Token(FLOAT, float(num))
+ 
 
 #nodes for numbers and binary expression   
 #      plus 
