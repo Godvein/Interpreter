@@ -217,6 +217,14 @@ class BinaryOpNode():
 
     def __repr__(self):
         return f'({self.leftnode}, {self.optok}, {self.rightnode})'
+
+class UnaryOperation():
+    def __init__(self, op_tok, node):
+        self.op_tok = op_tok
+        self.node = node
+
+    def __repr__(self):
+        return f'{self.op_tok}, {self.node}'
     
 #Parse Result class to check for any error during parsing
 class ParseResult():
@@ -261,10 +269,26 @@ class Parser():
         tok = self.curr_tok
         res = ParseResult()
 
-        if tok.type in (INTEGER, FLOAT):
+
+        if tok.type in (PLUS,MINUS):
+            res.register(self.advance())
+            factor = res.register(self.factor())
+            if res.error: return res
+            return res.success(UnaryOperation(tok, factor))
+
+        elif tok.type in (INTEGER, FLOAT):
             res.register(self.advance())
             return res.success(NumberNode(tok))
         
+        elif tok.type == LEFT_PAR:
+            res.register(self.advance())
+            expr = res.register(self.exp())
+            if res.error: return res
+            if self.curr_tok.type == RIGHT_PAR:
+                res.register(self.advance())
+                return res.success(expr)
+            else:
+                return res.failure(SyntaxError(self.curr_tok.pos_start, self.curr_tok.pos_end, "Expected ')'"))
         return res.failure(SyntaxError(tok.pos_start, tok.pos_end, "Expected int or float"))
 
     def term(self):
