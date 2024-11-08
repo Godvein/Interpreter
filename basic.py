@@ -219,7 +219,7 @@ class BinaryOpNode():
         self.rightnode = rightnode
 
         self.pos_start = self.leftnode.pos_start
-        self.pos_start = self.rightnode.pos_start
+        self.pos_end = self.rightnode.pos_start
 
     def __repr__(self):
         return f'({self.leftnode}, {self.optok}, {self.rightnode})'
@@ -327,6 +327,7 @@ class Number():
     def setposition(self, pos_start = None, pos_end = None):
         self.pos_start = pos_start
         self.pos_end = pos_end
+        return self
 
     #Addition
     def addvalue(self, other):
@@ -396,4 +397,4 @@ def run(text, fn):
 
     interpreter = Interpreter()
     result = interpreter.visit(ast.node)
-    return result, None
+    return result.value, None
