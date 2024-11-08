@@ -206,6 +206,9 @@ class Lexer():
 class NumberNode():
     def __init__(self, tok):
         self.tok = tok
+        self.pos_start = self.tok.pos_start
+        self.pos_end = self.tok.pos_end
+
     def __repr__(self):
         return f'{self.tok}'
     
@@ -215,6 +218,9 @@ class BinaryOpNode():
         self.optok = optok
         self.rightnode = rightnode
 
+        self.pos_start = self.leftnode.pos_start
+        self.pos_start = self.rightnode.pos_start
+
     def __repr__(self):
         return f'({self.leftnode}, {self.optok}, {self.rightnode})'
 
@@ -222,6 +228,9 @@ class UnaryOperation():
     def __init__(self, op_tok, node):
         self.op_tok = op_tok
         self.node = node
+
+        self.pos_start = self.op_tok.pos_start
+        self.pos_end = self.node.pos_end
 
     def __repr__(self):
         return f'{self.op_tok}, {self.node}'
@@ -309,7 +318,71 @@ class Parser():
             left = BinaryOpNode(left, optok, right)
             
         return res.success(left)
+#Numeric Operation
+class Number():
+    def __init__(self, value):
+        self.value = value
+        self.setposition()
+    
+    def setposition(self, pos_start = None, pos_end = None):
+        self.pos_start = pos_start
+        self.pos_end = pos_end
 
+    #Addition
+    def addvalue(self, other):
+        if isinstance(other, Number):
+            return Number(self.value + other.value)
+
+    #Subtracton
+    def subtractvalue(self, other):
+        if isinstance(other, Number):
+            return Number(self.value - other.value)
+    
+    #Multiplication
+    def multiplyvalue(self, other):
+        if isinstance(other, Number):
+            return Number(self.value * other.value)
+
+    #Division
+    def dividevalue(self, other):
+        if isinstance(other, Number):
+            return Number(self.value / other.value)
+#Interpreter
+class Interpreter():
+    def visit(self, node):
+        method_name = f'visit_{type(node).__name__}'
+        method = getattr(self, method_name, self.novisitmethod)
+        return method(node)
+
+    def novisitmethod(self, node):
+        raise Exception(f'no visit method found {node.type.__name__}')
+    
+    def visit_NumberNode(self, node):
+        return Number(node.tok.value).setposition(node.tok.pos_start, node.tok.pos_end)
+
+    def visit_BinaryOpNode(self, node):
+        left = self.visit(node.leftnode)
+        right = self.visit(node.rightnode)
+
+        if node.optok.type == PLUS:
+            result = left.addvalue(right)
+        elif node.optok.type == MINUS:
+            result = left.subtractvalue(right)
+        elif node.optok.type == MULTIPLY:
+            result = left.multiplyvalue(right)
+        elif node.optok.type == DIVIDE:
+            result = left.dividevalue(right)
+
+        return result.setposition(node.pos_start, node.pos_end)
+
+    def visit_UnaryOperation(self, node):
+        number = self.visit(node.node)
+
+        if node.op_tok.type == MINUS:
+            number = number.multiplyvalue(Number(-1))
+
+        return number.setposition(node.pos_start, node.pos_end)
+        
     #run function to run the lexer
 def run(text, fn):
     lexer = Lexer(text, fn)
@@ -319,4 +392,8 @@ def run(text, fn):
     #generate Abstract Syntax Tree(AST)
     parser = Parser(token)
     ast = parser.parse()
-    return ast.node ,ast.error
+    if ast.error: return None, ast.error
+
+    interpreter = Interpreter()
+    result = interpreter.visit(ast.node)
+    return result, None
