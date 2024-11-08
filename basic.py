@@ -76,6 +76,10 @@ class SyntaxError(Error):
     def __init__(self, pos_start, pos_end,details):
         super().__init__(pos_start, pos_end, "Syntax Error", details)
 
+class RunTimeError(Error):
+    def __init__(self, pos_start, pos_end,details):
+        super().__init__(pos_start, pos_end, "Run-Time Error", details)
+
 #position class 
 class Position():
     def __init__(self, idx, ln, col, fn, ftxt):
@@ -332,22 +336,44 @@ class Number():
     #Addition
     def addvalue(self, other):
         if isinstance(other, Number):
-            return Number(self.value + other.value)
+            return Number(self.value + other.value), None
 
     #Subtracton
     def subtractvalue(self, other):
         if isinstance(other, Number):
-            return Number(self.value - other.value)
+            return Number(self.value - other.value), None
     
     #Multiplication
     def multiplyvalue(self, other):
         if isinstance(other, Number):
-            return Number(self.value * other.value)
+            return Number(self.value * other.value), None
 
     #Division
     def dividevalue(self, other):
         if isinstance(other, Number):
-            return Number(self.value / other.value)
+            if other.value == 0:
+                return None, RunTimeError(self.pos_start, self.pos_end, "not divisible by 0")
+            return Number(self.value / other.value), None
+
+#Interpreter Error Check
+class InterpreterResult():
+    def __init__(self):
+        self.value = None
+        self.error = None
+
+    def register(self, res):
+        if res.error:
+            self.error = res.error
+        return res
+
+    def success(self,value):
+        self.value = value 
+        return self
+
+    def failure(self, error):
+        self.error = error
+        return self
+
 #Interpreter
 class Interpreter():
     def visit(self, node):
@@ -359,30 +385,47 @@ class Interpreter():
         raise Exception(f'no visit method found {node.type.__name__}')
     
     def visit_NumberNode(self, node):
-        return Number(node.tok.value).setposition(node.tok.pos_start, node.tok.pos_end)
+        return InterpreterResult().success(
+            Number(node.tok.value).setposition(node.tok.pos_start, node.tok.pos_end))
 
     def visit_BinaryOpNode(self, node):
-        left = self.visit(node.leftnode)
-        right = self.visit(node.rightnode)
+        res = InterpreterResult()
+        left = res.register(self.visit(node.leftnode))
+        if res.error: return res
+
+        right = res.register(self.visit(node.rightnode))
+        if res.error: return res
+
+        left_value = left.value
+        right_value = right.value
 
         if node.optok.type == PLUS:
-            result = left.addvalue(right)
+            result,error = left_value.addvalue(right_value)
         elif node.optok.type == MINUS:
-            result = left.subtractvalue(right)
+            result,error = left_value.subtractvalue(right_value)
         elif node.optok.type == MULTIPLY:
-            result = left.multiplyvalue(right)
+            result,error = left_value.multiplyvalue(right_value)
         elif node.optok.type == DIVIDE:
-            result = left.dividevalue(right)
+            result,error = left_value.dividevalue(right_value)
 
-        return result.setposition(node.pos_start, node.pos_end)
+        if error: 
+            return res.failure(error)
+
+        else: return res.success(result.setposition(node.pos_start, node.pos_end))
 
     def visit_UnaryOperation(self, node):
-        number = self.visit(node.node)
+        res = InterpreterResult()
+        number = res.register(self.visit(node.node))
+        if res.error: return res
+
+        error = None
 
         if node.op_tok.type == MINUS:
-            number = number.multiplyvalue(Number(-1))
+            number,error = number.multiplyvalue(Number(-1))
 
-        return number.setposition(node.pos_start, node.pos_end)
+        if error: return res.failure(error)
+
+        return res.success(number.setposition(node.pos_start, node.pos_end))
         
     #run function to run the lexer
 def run(text, fn):
@@ -397,4 +440,6 @@ def run(text, fn):
 
     interpreter = Interpreter()
     result = interpreter.visit(ast.node)
-    return result.value, None
+   
+    return result.value, result.error
+   
